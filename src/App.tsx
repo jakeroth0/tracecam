@@ -1,4 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { useSpring, animated } from '@react-spring/web';
+import { useGesture } from '@use-gesture/react';
 
 const App: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -14,6 +16,58 @@ const App: React.FC = () => {
   const [showMoveMenu, setShowMoveMenu] = useState<boolean>(false);
   const [hideMode, setHideMode] = useState<boolean>(false);
   const [showOpacitySlider, setShowOpacitySlider] = useState<boolean>(false);
+
+  // New state for image transform (position and scale)
+  const [imageTransform, setImageTransform] = useState({ x: 0, y: 0, scale: 1 });
+  const [isPictureMoveMode, setIsPictureMoveMode] = useState(false);
+  const [isPictureMoveActive, setIsPictureMoveActive] = useState(false);
+
+  const [{ x, y, scale }, api] = useSpring(() => ({
+    x: 0,
+    y: 0,
+    scale: 1,
+    config: { tension: 180, friction: 26 },
+    onRest: (result) => {
+      const transform = {
+        x: result.value.x,
+        y: result.value.y,
+        scale: result.value.scale,
+      };
+      localStorage.setItem('tracecam_image_transform', JSON.stringify(transform));
+    },
+  }));
+
+  // Gesture handling for the overlay image
+  const bind = useGesture({
+    onDrag: ({ active, movement: [mx, my] }) => {
+      api.start({ 
+        x: active ? mx : 0, 
+        y: active ? my : 0, 
+        immediate: active 
+      });
+    },
+    onPinch: ({ active, movement: [s] }) => {
+      api.start({ scale: active ? s : 1, immediate: active });
+    },
+  }, {
+    drag: { from: () => [x.get(), y.get()], filterTaps: true },
+    pinch: { from: () => [scale.get(), 0], scaleBounds: { min: 0.5, max: 5 } },
+  });
+
+  // Load from localStorage on mount and sync springs
+  useEffect(() => {
+    const savedTransform = localStorage.getItem('tracecam_image_transform');
+    if (savedTransform) {
+      try {
+        const parsedTransform = JSON.parse(savedTransform);
+        if (parsedTransform && typeof parsedTransform === 'object') {
+          api.set(parsedTransform);
+        }
+      } catch (e) {
+        console.error("Failed to parse image transform from localStorage", e);
+      }
+    }
+  }, [api]);
 
   // Check privacy consent from localStorage on mount
   useEffect(() => {
@@ -131,18 +185,30 @@ const App: React.FC = () => {
   };
 
   // Clear overlay image
+  /*
   const handleClearImage = () => {
     setOverlayImage('');
     localStorage.removeItem('tracecam_overlay_image');
   };
+  */
 
   // Handle Move button toggle
   const handleMoveToggle = () => {
-    setShowMoveMenu(!showMoveMenu);
+    setShowMoveMenu(prev => {
+      // If we are closing the menu, also disable picture move mode.
+      if (prev) {
+        setIsPictureMoveActive(false);
+      }
+      return !prev;
+    });
     // Close other menus when opening move
     if (!showMoveMenu) {
       setShowOpacitySlider(false);
     }
+  };
+
+  const handlePictureMoveToggle = () => {
+    setIsPictureMoveActive(prev => !prev);
   };
 
   // Handle Hide button
@@ -342,10 +408,15 @@ const App: React.FC = () => {
                 <div className="fixed bottom-16 left-4 right-4 z-30">
                   <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-lg">
                     <div className="flex justify-center space-x-8">
-                      <button className="text-black font-medium px-6 py-2 hover:bg-gray-100 rounded-lg transition-colors duration-200 border border-gray-200">
+                      <button 
+                        onClick={handlePictureMoveToggle}
+                        className={`text-black font-medium px-6 py-2 rounded-lg transition-colors duration-200 border border-gray-200 ${
+                          isPictureMoveActive ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'
+                        }`}
+                      >
                         Picture
                       </button>
-                      <button className="text-black font-medium px-6 py-2 hover:bg-gray-100 rounded-lg transition-colors duration-200 border border-gray-200">
+                      <button className="text-gray-400 font-medium px-6 py-2 rounded-lg transition-colors duration-200 border border-gray-200 cursor-not-allowed">
                         Camera
                       </button>
                     </div>
@@ -376,11 +447,19 @@ const App: React.FC = () => {
               className="w-full h-full object-cover z-0"
             />
             {overlayImage && (
-              <img
-                src={overlayImage}
-                alt="Overlay"
-                className="absolute top-0 left-0 w-full h-full object-cover pointer-events-none z-10"
-                style={{ opacity: overlayOpacity }}
+              <animated.div
+                {...(isPictureMoveActive ? bind() : {})}
+                className="absolute top-0 left-0 w-full h-full touch-none z-10"
+                style={{
+                  x,
+                  y,
+                  scale,
+                  opacity: overlayOpacity,
+                  backgroundImage: `url(${overlayImage})`,
+                  backgroundSize: 'contain',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'center',
+                }}
               />
             )}
           </div>

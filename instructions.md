@@ -6,7 +6,7 @@ Absolutely, I'll lay out a **clean, step-by-step build plan** for TraceCam as a 
 # TraceCam Build Roadmap (Phase-Driven Step-by-Step)
 
 This document guides you through building the TraceCam app **one core feature at a time**.
-Each phase is self-contained—fully complete one before moving to the next.  
+Each phase is self-contained—fully complete one before moving to the next.
 **Goal:** Build a mobile web app that opens the back camera, displays a privacy notice, allows overlaying an image (with opacity control), and never uploads user data.
 
 ---
@@ -19,28 +19,19 @@ Each phase is self-contained—fully complete one before moving to the next.
   npm create vite@latest tracecam --template react
   cd tracecam
   npm install
-````
-
-* [x] Install Tailwind CSS:
-
+  ```
+- [x] Install Tailwind CSS:
   ```bash
-  npm install -D tailwindcss postcss autoprefixer
-  npx tailwindcss init -p
+  npm install -D tailwindcss @tailwindcss/vite postcss autoprefixer
+  npx tailwindcss init
   ```
-
-  * Follow [Tailwind's official Vite+React guide](https://tailwindcss.com/docs/guides/vite).
-
-* [x] Remove default boilerplate from `App.jsx` and `main.jsx`.
-
-* [x] In `index.css`, include Tailwind's base styles:
-
+  * Configured `vite.config.ts` to use the `@tailwindcss/vite` plugin.
+- [x] Remove default boilerplate from `App.tsx` and `main.tsx`.
+- [x] In `index.css`, include Tailwind's base styles:
   ```css
-  @tailwind base;
-  @tailwind components;
-  @tailwind utilities;
+  @import "tailwindcss";
   ```
-
-* [x] Confirm `npm run dev` works and displays a blank page.
+- [x] Confirm `npm run dev` works and displays a blank page.
 
 ---
 
@@ -51,34 +42,27 @@ Each phase is self-contained—fully complete one before moving to the next.
 ### Steps
 
 1. **Set Up Main Layout**
-
-   * [ ] Use a minimal, full-viewport container (`min-h-screen`, `flex`, `items-center`, `justify-center`, `bg-gray-100`).
+   * [x] Use a minimal, full-viewport container.
+   * [x] **Update:** Implemented a two-bar layout with solid white bars at the top and bottom.
 
 2. **Add Video Element**
-
-   * [ ] In `App.jsx`, add a `<video>` element with these props:
-
-     * `autoPlay`
-     * `playsInline`
-     * `muted`
-     * Full width/height (`className="fixed inset-0 w-full h-full object-cover z-0"`)
-     * Ref: `videoRef` via `useRef`
+   * [x] In `App.tsx`, add a `<video>` element with these props:
+     * `autoPlay`, `playsInline`, `muted`
+     * Positioned to fill the space between the top and bottom bars.
+     * Ref: `videoRef` via `useRef`.
 
 3. **Request Camera Stream**
-
-   * [ ] On mount (using `useEffect`), request `getUserMedia({ video: { facingMode: { exact: "environment" }}})`.
-   * [ ] If error, fallback to `{ video: { facingMode: "environment" }}`.
-   * [ ] Attach the stream to `videoRef.current.srcObject`.
+   * [x] On mount (using `useEffect`), request `getUserMedia({ video: { facingMode: { exact: "environment" }}})`.
+   * [x] If error, fallback to `{ video: { facingMode: "environment" }}`.
+   * [x] Attach the stream to `videoRef.current.srcObject`.
 
 4. **Error Handling**
-
-   * [ ] If camera access fails, show a large, clear error message overlay.
-   * [ ] If browser doesn't support camera, show a warning.
+   * [x] If camera access fails, show a large, clear error message overlay.
+   * [x] If browser doesn't support camera, show a warning.
 
 5. **Testing**
-
-   * [ ] Confirm on laptop with webcam, then on phone (using `npm run dev -- --host` and your local IP).
-   * [ ] The camera feed should fill the screen, be responsive, and not be covered by other elements.
+   * [x] Confirm on laptop with webcam, then on phone.
+   * [x] The camera feed fills the space between the bars correctly.
 
 ---
 
@@ -89,28 +73,20 @@ Each phase is self-contained—fully complete one before moving to the next.
 ### Steps
 
 1. **Add Privacy State**
-
-   * [ ] In `App.jsx`, create state: `showPrivacy` (default: `true`).
-   * [ ] Only show the camera feed if `showPrivacy` is `false`.
+   * [x] In `App.tsx`, create state: `showPrivacy` (default: `true`).
+   * [x] Only show the camera feed if `showPrivacy` is `false`.
 
 2. **Privacy Modal UI**
-
-   * [ ] Create a modal or banner using Tailwind:
-
-     * Frosted glass look: `bg-white/60 backdrop-blur-md rounded-xl shadow-xl p-6 max-w-sm mx-auto`
-     * Centered on screen, with larger text and a close/agree button.
-   * [ ] Example message:
-     "TraceCam uses your camera for tracing overlays. Images and data **never leave your device**. By continuing, you agree to grant camera access."
+   * [x] Create a modal or banner using Tailwind.
+   * [x] Message clarifies that data never leaves the device.
 
 3. **Dismissal Logic**
-
-   * [ ] On button click, set `showPrivacy` to `false`.
-   * [ ] (Optional) Store a flag in `localStorage` so it doesn't pop up every visit.
+   * [x] On button click, set `showPrivacy` to `false`.
+   * [x] Store a flag in `localStorage` so it doesn't pop up every visit.
 
 4. **Testing**
-
-   * [ ] Confirm modal appears on first visit.
-   * [ ] When dismissed, camera feed starts.
+   * [x] Confirm modal appears on first visit.
+   * [x] When dismissed, camera feed starts.
 
 ---
 
@@ -121,36 +97,28 @@ Each phase is self-contained—fully complete one before moving to the next.
 ### Steps
 
 1. **Add Upload UI**
-
-   * [ ] Add a button/input for image upload (`type="file"`, accept `image/*`).
-   * [ ] When image is chosen, read as base64 using `FileReader`.
-   * [ ] Store in React state (`overlayImage`).
+   * [x] Add a button/input for image upload (`type="file"`, accept `image/*`).
+   * [x] When image is chosen, read as base64 using `FileReader`.
+   * [x] Store in React state (`overlayImage`).
 
 2. **Overlay the Image**
-
-   * [ ] Render the uploaded image as an `<img>` tag with:
-
-     * Absolute/fixed positioning
-     * Full viewport size
-     * `pointer-events-none` so it doesn't block UI
-     * Use CSS `opacity` (controlled by state)
-     * Place above the video via `z-index`
+   * [x] Render the uploaded image as an `<img>` tag.
+   * [x] Positioned to fill the space between the top and bottom bars.
+   * [x] Use CSS `opacity` (controlled by state).
+   * [x] Place above the video via `z-index`.
 
 3. **Add Opacity Control**
-
-   * [ ] Add a slider (`input type="range"`, min `0.1`, max `1`, step `0.01`).
-   * [ ] Bind slider to overlay image opacity.
+   * [x] Add a slider (`input type="range"`) that appears when the "Opacity" button is clicked.
+   * [x] Bind slider to overlay image opacity.
 
 4. **Persist Overlay**
-
-   * [ ] Store the uploaded image and last opacity value in `localStorage`.
-   * [ ] On load, restore from storage if available.
+   * [x] Store the uploaded image and last opacity value in `localStorage`.
+   * [x] On load, restore from storage if available.
 
 5. **Testing**
-
-   * [ ] Upload an image, see it appear over the camera feed.
-   * [ ] Adjust opacity; confirm real-time changes.
-   * [ ] Refresh page; overlay image and opacity should persist.
+   * [x] Upload an image, see it appear over the camera feed.
+   * [x] Adjust opacity; confirm real-time changes.
+   * [x] Refresh page; overlay image and opacity should persist.
 
 ---
 
@@ -159,6 +127,7 @@ Each phase is self-contained—fully complete one before moving to the next.
 **Optional, after MVP:**
 
 * [ ] "Clear Image" button with confirmation modal.
+* [ ] Implement "Move" functionality (for image and/or camera).
 * [ ] Bigger, touch-friendly UI buttons (min height, larger font).
 * [ ] PWA install prompt (using Vite PWA plugin).
 * [ ] Accessibility tweaks (focus styles, ARIA labels).
@@ -184,6 +153,6 @@ Each phase is self-contained—fully complete one before moving to the next.
 
 ---
 
-**You can copy this as your new `README.md` and start fresh.**  
+**You can copy this as your new `README.md` and start fresh.**
 Let me know if you want example code for any phase, or want this as a downloadable file!
 ```
