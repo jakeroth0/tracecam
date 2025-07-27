@@ -1,6 +1,4 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useSpring, animated } from '@react-spring/web';
-import { useGesture } from '@use-gesture/react';
 
 const App: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -12,36 +10,42 @@ const App: React.FC = () => {
   const [overlayImage, setOverlayImage] = useState<string>('');
   const [overlayOpacity, setOverlayOpacity] = useState<number>(0.5);
   
-  // New UI state management
   const [showMoveMenu, setShowMoveMenu] = useState<boolean>(false);
   const [hideMode, setHideMode] = useState<boolean>(false);
   const [showOpacitySlider, setShowOpacitySlider] = useState<boolean>(false);
-
-  // New state for image transform (position and scale)
   const [isPictureMoveActive, setIsPictureMoveActive] = useState(false);
 
-  // Correct react-spring and useGesture implementation
-  const [{ x, y, scale }, api] = useSpring(() => ({
-    x: 0,
-    y: 0,
-    scale: 1,
-    config: { tension: 180, friction: 26 },
-    onRest: (result: { value: { x: number; y: number; scale: number; } }) => {
-      localStorage.setItem('tracecam_image_transform', JSON.stringify(result.value));
-    },
-  }));
+  // Simple position state - no complex libraries
+  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0, scale: 1 });
+  const dragStartPos = useRef({ x: 0, y: 0 });
+  const isDragging = useRef(false);
 
-  const bind = useGesture({
-    onDrag: ({ offset: [dx, dy] }) => {
-      api.start({ x: dx, y: dy });
-    },
-    onPinch: ({ offset: [s] }) => {
-      api.start({ scale: s });
-    },
-  }, {
-    drag: { from: () => [x.get(), y.get()], filterTaps: true },
-    pinch: { from: () => [scale.get(), 0], scaleBounds: { min: 0.5, max: 5 } },
-  });
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!isPictureMoveActive) return;
+    isDragging.current = true;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isPictureMoveActive || !isDragging.current) return;
+    const dx = e.clientX - dragStartPos.current.x;
+    const dy = e.clientY - dragStartPos.current.y;
+    setImagePosition(prev => ({
+      ...prev,
+      x: prev.x + dx,
+      y: prev.y + dy
+    }));
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isPictureMoveActive) return;
+    isDragging.current = false;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    // Save to localStorage
+    localStorage.setItem('tracecam_image_transform', JSON.stringify(imagePosition));
+  };
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -50,13 +54,13 @@ const App: React.FC = () => {
       try {
         const parsedTransform = JSON.parse(savedTransform);
         if (parsedTransform && typeof parsedTransform === 'object') {
-          api.set(parsedTransform);
+          setImagePosition(parsedTransform);
         }
       } catch (e) {
         console.error("Failed to parse image transform from localStorage", e);
       }
     }
-  }, [api]);
+  }, []);
 
   // Check privacy consent from localStorage on mount
   useEffect(() => {
@@ -123,7 +127,6 @@ const App: React.FC = () => {
         // Attach stream to video element
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
-          console.log('Stream assigned to video element:', mediaStream);
         } else {
           console.log('Video ref is null, cannot assign stream');
         }
@@ -160,7 +163,7 @@ const App: React.FC = () => {
       reader.onload = (e) => {
         const base64 = e.target?.result as string;
         setOverlayImage(base64);
-        localStorage.setItem('tracecam_overlay_image', base64);
+        // localStorage.setItem('tracecam_overlay_image', base64); // This can exceed quota
       };
       reader.readAsDataURL(file);
     }
@@ -174,22 +177,21 @@ const App: React.FC = () => {
   };
 
   // Clear overlay image
-  /*
   const handleClearImage = () => {
     setOverlayImage('');
-    localStorage.removeItem('tracecam_overlay_image');
+    const resetPos = { x: 0, y: 0, scale: 1 };
+    setImagePosition(resetPos);
+    localStorage.removeItem('tracecam_image_transform');
   };
-  */
 
   // Handle Move button toggle
   const handleMoveToggle = () => {
-    setShowMoveMenu(prev => {
-      // If we are closing the menu, also disable picture move mode.
-      if (prev) {
-        setIsPictureMoveActive(false);
-      }
-      return !prev;
-    });
+    setShowMoveMenu(prev => !prev);
+    // When closing the move menu, deactivate picture move mode and save position
+    if (showMoveMenu && isPictureMoveActive) {
+      setIsPictureMoveActive(false);
+      localStorage.setItem('tracecam_image_transform', JSON.stringify(imagePosition));
+    }
     // Close other menus when opening move
     if (!showMoveMenu) {
       setShowOpacitySlider(false);
@@ -202,6 +204,14 @@ const App: React.FC = () => {
 
   // Handle Hide button
   const handleHide = () => {
+    // Lock the image position when hiding
+    if (isPictureMoveActive) {
+      setIsPictureMoveActive(false);
+      localStorage.setItem('tracecam_image_transform', JSON.stringify(imagePosition));
+    }
+    // We are adding the top bar height (56px / 2 = 28px)
+    // to the y position to compensate for the container moving up.
+    setImagePosition(prev => ({ ...prev, y: prev.y + 28 }));
     setHideMode(true);
     setShowMoveMenu(false);
     setShowOpacitySlider(false);
@@ -209,6 +219,8 @@ const App: React.FC = () => {
 
   // Handle show from eye button
   const handleShow = () => {
+    // We subtract the top bar height to compensate for the container moving down.
+    setImagePosition(prev => ({ ...prev, y: prev.y - 28 }));
     setHideMode(false);
   };
 
@@ -223,7 +235,6 @@ const App: React.FC = () => {
 
   // Handle video can play event
   const handleCanPlay = () => {
-    console.log('handleCanPlay called');
     if (videoRef.current) {
       videoRef.current.play().catch(err => {
         console.error('Video play failed:', err);
@@ -329,7 +340,7 @@ const App: React.FC = () => {
               {/* Top Navigation Bar */}
               <div className="fixed top-0 left-0 right-0 h-14 bg-white flex items-center justify-between px-4 z-40 border-b border-gray-200 shadow-sm">
                 <h1 className="text-lg font-bold text-black">TraceCam</h1>
-                <div>
+                <div className="flex items-center space-x-2">
                   <input
                     type="file"
                     accept="image/*"
@@ -341,8 +352,16 @@ const App: React.FC = () => {
                     htmlFor="upload-image"
                     className="bg-gray-100 hover:bg-gray-200 text-black px-4 py-2 rounded-full font-medium transition-colors duration-200 cursor-pointer border border-gray-300 text-sm"
                   >
-                    Upload Image
+                    Upload
                   </label>
+                  {overlayImage && (
+                    <button
+                      onClick={handleClearImage}
+                      className="bg-red-100 hover:bg-red-200 text-red-600 px-4 py-2 rounded-full font-medium transition-colors duration-200 cursor-pointer border border-red-300 text-sm"
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -436,18 +455,20 @@ const App: React.FC = () => {
               className="w-full h-full object-cover z-0"
             />
             {overlayImage && (
-              <animated.div
-                {...(isPictureMoveActive ? bind() : {})}
+              <div
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
                 className="absolute top-0 left-0 w-full h-full touch-none z-10"
                 style={{
-                  x,
-                  y,
-                  scale,
+                  transform: `translate(${imagePosition.x}px, ${imagePosition.y}px) scale(${imagePosition.scale})`,
                   opacity: overlayOpacity,
                   backgroundImage: `url(${overlayImage})`,
                   backgroundSize: 'contain',
                   backgroundRepeat: 'no-repeat',
                   backgroundPosition: 'center',
+                  cursor: isPictureMoveActive ? 'grab' : 'default',
                 }}
               />
             )}
