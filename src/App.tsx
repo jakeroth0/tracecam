@@ -19,6 +19,15 @@ const App: React.FC = () => {
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0, scale: 1 });
   const dragStartPos = useRef({ x: 0, y: 0 });
   const isDragging = useRef(false);
+  const lastPinchDistance = useRef(0);
+  const isPinching = useRef(false);
+
+  // Helper function to calculate distance between two touch points
+  const getDistance = (touch1: React.Touch, touch2: React.Touch) => {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!isPictureMoveActive) return;
@@ -45,6 +54,68 @@ const App: React.FC = () => {
     e.currentTarget.releasePointerCapture(e.pointerId);
     // Save to localStorage
     localStorage.setItem('tracecam_image_transform', JSON.stringify(imagePosition));
+  };
+
+  // Touch event handlers for pinch-to-zoom
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isPictureMoveActive) return;
+    
+    if (e.touches.length === 2) {
+      // Start pinch gesture
+      isPinching.current = true;
+      isDragging.current = false; // Disable dragging during pinch
+      lastPinchDistance.current = getDistance(e.touches[0], e.touches[1]);
+    } else if (e.touches.length === 1) {
+      // Single touch for dragging
+      isPinching.current = false;
+      isDragging.current = true;
+      dragStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isPictureMoveActive) return;
+    e.preventDefault(); // Prevent page scrolling
+    
+    if (e.touches.length === 2 && isPinching.current) {
+      // Handle pinch gesture
+      const currentDistance = getDistance(e.touches[0], e.touches[1]);
+      const scale = currentDistance / lastPinchDistance.current;
+      
+      setImagePosition(prev => ({
+        ...prev,
+        scale: Math.max(0.5, Math.min(3, prev.scale * scale)) // Limit scale between 0.5x and 3x
+      }));
+      
+      lastPinchDistance.current = currentDistance;
+    } else if (e.touches.length === 1 && isDragging.current) {
+      // Handle single touch drag
+      const dx = e.touches[0].clientX - dragStartPos.current.x;
+      const dy = e.touches[0].clientY - dragStartPos.current.y;
+      setImagePosition(prev => ({
+        ...prev,
+        x: prev.x + dx,
+        y: prev.y + dy
+      }));
+      dragStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isPictureMoveActive) return;
+    
+    if (e.touches.length === 0) {
+      // All touches ended
+      isDragging.current = false;
+      isPinching.current = false;
+      // Save to localStorage
+      localStorage.setItem('tracecam_image_transform', JSON.stringify(imagePosition));
+    } else if (e.touches.length === 1 && isPinching.current) {
+      // Transition from pinch to single touch drag
+      isPinching.current = false;
+      isDragging.current = true;
+      dragStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
   };
 
   // Load from localStorage on mount
@@ -452,6 +523,10 @@ const App: React.FC = () => {
               playsInline
               muted
               onCanPlay={handleCanPlay}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
               className="w-full h-full object-cover z-0"
             />
             {overlayImage && (
@@ -460,6 +535,10 @@ const App: React.FC = () => {
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchEnd}
                 className="absolute top-0 left-0 w-full h-full touch-none z-10"
                 style={{
                   transform: `translate(${imagePosition.x}px, ${imagePosition.y}px) scale(${imagePosition.scale})`,

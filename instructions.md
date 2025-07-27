@@ -126,8 +126,12 @@ Each phase is self-contained—fully complete one before moving to the next.
 
 **Optional, after MVP:**
 
-* [ ] "Clear Image" button with confirmation modal.
-* [ ] Implement "Move" functionality (for image and/or camera).
+* [x] "Clear Image" button with confirmation modal.
+* [x] Implement "Move" functionality (for image and/or camera).
+  * Image positioning with drag and drop
+  * Position persistence across UI state changes
+  * Automatic locking when exiting move mode
+* [ ] Fix UI jump when hiding/showing bars (camera/image should stay in same visual position)
 * [ ] Bigger, touch-friendly UI buttons (min height, larger font).
 * [ ] PWA install prompt (using Vite PWA plugin).
 * [ ] Accessibility tweaks (focus styles, ARIA labels).
