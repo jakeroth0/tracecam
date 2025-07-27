@@ -131,10 +131,12 @@ const App: React.FC = () => {
   };
 
   // Clear overlay image
+  /*
   const handleClearImage = () => {
     setOverlayImage('');
     localStorage.removeItem('tracecam_overlay_image');
   };
+  */
 
   // Handle Move button toggle
   const handleMoveToggle = () => {
