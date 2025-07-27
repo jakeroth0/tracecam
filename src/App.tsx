@@ -24,15 +24,6 @@ const App: React.FC = () => {
   const lastPinchDistance = useRef(0);
   const isPinching = useRef(false);
 
-  // Calculate the viewport area for camera/image (accounting for bars)
-  const getViewportArea = () => {
-    if (hideMode) {
-      return { top: 0, bottom: 0, height: window.innerHeight };
-    } else {
-      return { top: 56, bottom: 56, height: window.innerHeight - 112 }; // 56px for each bar
-    }
-  };
-
   // Helper function to calculate distance between two touch points
   const getDistance = (touch1: React.Touch, touch2: React.Touch) => {
     const dx = touch1.clientX - touch2.clientX;
