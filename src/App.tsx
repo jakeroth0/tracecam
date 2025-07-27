@@ -60,6 +60,8 @@ const App: React.FC = () => {
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // Ensure video plays automatically
+        await videoRef.current.play();
         setCameraMode({ isActive: true, stream });
       }
     } catch (error) {
@@ -68,6 +70,8 @@ const App: React.FC = () => {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          // Ensure video plays automatically
+          await videoRef.current.play();
           setCameraMode({ isActive: true, stream });
         }
       } catch (fallbackError) {
@@ -96,44 +100,48 @@ const App: React.FC = () => {
 
   // Privacy modal component
   const PrivacyModal = () => (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg p-6 max-w-md w-full">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">Privacy Notice</h2>
-        <p className="text-gray-700 mb-6">
-          TraceCam uses your camera and lets you upload images for overlay tracing. 
-          All data stays on your device and is never uploaded. You can clear images at any time.
-        </p>
-        <button
-          onClick={dismissPrivacyModal}
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-        >
-          Got it
-        </button>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white/40 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 p-8 max-w-md w-full">
+        <div className="bg-gradient-to-br from-white/30 to-blue-200/20 p-6 rounded-xl">
+          <h2 className="text-2xl font-bold mb-4 text-gray-800 text-center">Privacy Notice</h2>
+          <p className="text-gray-700 mb-6 text-lg leading-relaxed">
+            TraceCam uses your camera and lets you upload images for overlay tracing. 
+            All data stays on your device and is never uploaded. You can clear images at any time.
+          </p>
+          <button
+            onClick={dismissPrivacyModal}
+            className="w-full bg-blue-500 hover:bg-blue-600 focus:ring-4 focus:ring-blue-300 text-white font-semibold py-4 px-6 rounded-xl text-lg transition-all cursor-pointer select-none shadow-lg"
+          >
+            Got it!
+          </button>
+        </div>
       </div>
     </div>
   );
 
   // Clear confirmation modal
   const ClearConfirmModal = () => (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg p-6 max-w-md w-full">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">Clear Image</h2>
-        <p className="text-gray-700 mb-6">
-          Are you sure you want to clear this image? This cannot be undone.
-        </p>
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowClearConfirm(false)}
-            className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={clearImage}
-            className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-          >
-            Clear Image
-          </button>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white/40 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 p-8 max-w-md w-full">
+        <div className="bg-gradient-to-br from-white/30 to-blue-200/20 p-6 rounded-xl">
+          <h2 className="text-2xl font-bold mb-4 text-gray-800 text-center">Clear Image</h2>
+          <p className="text-gray-700 mb-6 text-lg leading-relaxed text-center">
+            Are you sure you want to clear this image? This cannot be undone.
+          </p>
+          <div className="flex gap-4">
+            <button
+              onClick={() => setShowClearConfirm(false)}
+              className="flex-1 bg-gray-300 hover:bg-gray-400 focus:ring-4 focus:ring-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-xl text-lg transition-all cursor-pointer select-none shadow-lg min-w-[120px]"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={clearImage}
+              className="flex-1 bg-red-500 hover:bg-red-600 focus:ring-4 focus:ring-red-300 text-white font-semibold py-4 px-6 rounded-xl text-lg transition-all cursor-pointer select-none shadow-lg min-w-[120px]"
+            >
+              Clear Image
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -142,12 +150,13 @@ const App: React.FC = () => {
   // Camera view component
   if (cameraMode.isActive) {
     return (
-      <div className="min-h-screen bg-gray-900 relative">
+      <div className="min-h-screen bg-gray-900 relative overflow-hidden">
         <video
           ref={videoRef}
           autoPlay
           playsInline
-          className="w-full h-screen object-cover"
+          muted
+          className="absolute inset-0 w-full h-full object-cover z-10"
         />
         
         {/* Image overlay */}
@@ -155,17 +164,17 @@ const App: React.FC = () => {
           <img
             src={uploadedImage}
             alt="Overlay"
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none z-20"
             style={{ opacity }}
           />
         )}
 
         {/* Camera controls */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
-          <div className="max-w-md mx-auto space-y-4">
+        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent z-30">
+          <div className="max-w-md mx-auto space-y-6">
             {/* Opacity slider */}
-            <div className="bg-white/20 backdrop-blur-md rounded-lg p-4">
-              <label className="block text-white text-sm font-medium mb-2">
+            <div className="bg-white/40 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 p-6">
+              <label className="block text-white text-lg font-semibold mb-3">
                 Overlay Opacity: {Math.round(opacity * 100)}%
               </label>
               <input
@@ -175,22 +184,22 @@ const App: React.FC = () => {
                 step="0.01"
                 value={opacity}
                 onChange={handleOpacityChange}
-                className="w-full"
+                className="w-full cursor-pointer"
               />
             </div>
 
             {/* Action buttons */}
-            <div className="flex gap-2">
+            <div className="flex gap-4">
               <button
                 onClick={exitCamera}
-                className="flex-1 bg-white/20 backdrop-blur-md hover:bg-white/30 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                className="flex-1 bg-white/40 backdrop-blur-lg hover:bg-white/50 focus:ring-4 focus:ring-white/30 text-white font-semibold py-4 px-6 rounded-xl text-lg transition-all cursor-pointer select-none shadow-xl border border-white/30 min-w-[120px]"
               >
                 Exit Camera
               </button>
               {uploadedImage && (
                 <button
                   onClick={() => setShowClearConfirm(true)}
-                  className="flex-1 bg-red-500/80 hover:bg-red-600/80 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                  className="flex-1 bg-red-500/80 hover:bg-red-600/90 focus:ring-4 focus:ring-red-300 text-white font-semibold py-4 px-6 rounded-xl text-lg transition-all cursor-pointer select-none shadow-xl min-w-[120px]"
                 >
                   Clear Image
                 </button>
@@ -209,86 +218,88 @@ const App: React.FC = () => {
   // Main UI view
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 flex flex-col items-center justify-center p-4">
-      <div className="bg-white/60 backdrop-blur-md rounded-xl shadow-lg p-6 w-full max-w-md">
-        {/* Title */}
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">TraceCam</h1>
+      <div className="bg-white/40 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 p-8 w-full max-w-md">
+        <div className="bg-gradient-to-br from-white/30 to-blue-200/20 p-6 rounded-xl">
+          {/* Title */}
+          <h1 className="text-4xl font-bold text-center text-gray-800 mb-8 select-none">TraceCam</h1>
 
-        {/* Image preview */}
-        {uploadedImage && (
-          <div className="mb-6">
-            <img
-              src={uploadedImage}
-              alt="Preview"
-              className="w-full h-48 object-contain bg-gray-100 rounded-lg border-2 border-dashed border-gray-300"
-              style={{ opacity }}
+          {/* Image preview */}
+          {uploadedImage && (
+            <div className="mb-8">
+              <img
+                src={uploadedImage}
+                alt="Preview"
+                className="w-full h-48 object-contain bg-gray-100/50 rounded-xl border-2 border-dashed border-gray-300"
+                style={{ opacity }}
+              />
+              <button
+                onClick={() => setShowClearConfirm(true)}
+                className="mt-3 text-red-600 hover:text-red-800 text-lg font-semibold cursor-pointer select-none"
+              >
+                Remove Image
+              </button>
+            </div>
+          )}
+
+          {/* Upload button */}
+          <div className="mb-8">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={handleImageUpload}
+              className="hidden"
             />
             <button
-              onClick={() => setShowClearConfirm(true)}
-              className="mt-2 text-red-600 hover:text-red-800 text-sm font-medium"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full bg-blue-500 hover:bg-blue-600 focus:ring-4 focus:ring-blue-300 text-white font-semibold py-4 px-6 rounded-xl text-lg transition-all cursor-pointer select-none shadow-lg"
             >
-              Remove Image
+              {uploadedImage ? 'Change Image' : 'Upload Image'}
             </button>
           </div>
-        )}
 
-        {/* Upload button */}
-        <div className="mb-6">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
+          {/* Opacity slider */}
+          <div className="mb-8">
+            <label className="block text-gray-700 text-lg font-semibold mb-3 select-none">
+              Overlay Opacity: {Math.round(opacity * 100)}%
+            </label>
+            <input
+              type="range"
+              min="0.1"
+              max="1"
+              step="0.01"
+              value={opacity}
+              onChange={handleOpacityChange}
+              className="w-full cursor-pointer"
+            />
+          </div>
+
+          {/* Start camera button */}
           <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+            onClick={startCamera}
+            disabled={!uploadedImage}
+            className={`w-full font-semibold py-4 px-6 rounded-xl text-lg transition-all cursor-pointer select-none shadow-lg min-w-[120px] ${
+              uploadedImage
+                ? 'bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 text-white'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
-            {uploadedImage ? 'Change Image' : 'Upload Image'}
+            Start Camera
           </button>
+
+          {!uploadedImage && (
+            <p className="text-gray-600 text-lg text-center mt-4 select-none">
+              Upload an image first to start tracing
+            </p>
+          )}
         </div>
-
-        {/* Opacity slider */}
-        <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-medium mb-2">
-            Overlay Opacity: {Math.round(opacity * 100)}%
-          </label>
-          <input
-            type="range"
-            min="0.1"
-            max="1"
-            step="0.01"
-            value={opacity}
-            onChange={handleOpacityChange}
-            className="w-full"
-          />
-        </div>
-
-        {/* Start camera button */}
-        <button
-          onClick={startCamera}
-          disabled={!uploadedImage}
-          className={`w-full font-medium py-3 px-4 rounded-lg transition-colors ${
-            uploadedImage
-              ? 'bg-green-500 hover:bg-green-600 text-white'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
-        >
-          Start Camera
-        </button>
-
-        {!uploadedImage && (
-          <p className="text-gray-600 text-sm text-center mt-2">
-            Upload an image first to start tracing
-          </p>
-        )}
       </div>
 
       {/* Privacy info */}
-      <div className="mt-6 text-center">
+      <div className="mt-8 text-center">
         <button
           onClick={() => setShowPrivacyModal(true)}
-          className="text-white/80 hover:text-white text-sm underline"
+          className="text-white/90 hover:text-white text-lg underline cursor-pointer select-none font-medium"
         >
           Privacy Info
         </button>
