@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { useGesture } from '@use-gesture/react';
-import type { FullGestureState } from '@use-gesture/react';
 
 const App: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
