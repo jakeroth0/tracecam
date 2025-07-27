@@ -100,19 +100,19 @@ const App: React.FC = () => {
 
   // Privacy modal component
   const PrivacyModal = () => (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white/40 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 p-8 max-w-md w-full">
-        <div className="bg-gradient-to-br from-white/30 to-blue-200/20 p-6 rounded-xl">
-          <h2 className="text-2xl font-bold mb-4 text-gray-800 text-center">Privacy Notice</h2>
-          <p className="text-gray-700 mb-6 text-lg leading-relaxed">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full border border-gray-200">
+        <div className="p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Privacy Notice</h2>
+          <p className="text-gray-600 mb-6 leading-relaxed">
             TraceCam uses your camera and lets you upload images for overlay tracing. 
             All data stays on your device and is never uploaded. You can clear images at any time.
           </p>
           <button
             onClick={dismissPrivacyModal}
-            className="w-full bg-blue-500 hover:bg-blue-600 focus:ring-4 focus:ring-blue-300 text-white font-semibold py-4 px-6 rounded-xl text-lg transition-all cursor-pointer select-none shadow-lg"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
-            Got it!
+            Got it
           </button>
         </div>
       </div>
@@ -121,23 +121,23 @@ const App: React.FC = () => {
 
   // Clear confirmation modal
   const ClearConfirmModal = () => (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white/40 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 p-8 max-w-md w-full">
-        <div className="bg-gradient-to-br from-white/30 to-blue-200/20 p-6 rounded-xl">
-          <h2 className="text-2xl font-bold mb-4 text-gray-800 text-center">Clear Image</h2>
-          <p className="text-gray-700 mb-6 text-lg leading-relaxed text-center">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full border border-gray-200">
+        <div className="p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Clear Image</h2>
+          <p className="text-gray-600 mb-6 leading-relaxed">
             Are you sure you want to clear this image? This cannot be undone.
           </p>
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             <button
               onClick={() => setShowClearConfirm(false)}
-              className="flex-1 bg-gray-300 hover:bg-gray-400 focus:ring-4 focus:ring-gray-300 text-gray-800 font-semibold py-4 px-6 rounded-xl text-lg transition-all cursor-pointer select-none shadow-lg min-w-[120px]"
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
             >
               Cancel
             </button>
             <button
               onClick={clearImage}
-              className="flex-1 bg-red-500 hover:bg-red-600 focus:ring-4 focus:ring-red-300 text-white font-semibold py-4 px-6 rounded-xl text-lg transition-all cursor-pointer select-none shadow-lg min-w-[120px]"
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
             >
               Clear Image
             </button>
@@ -170,11 +170,11 @@ const App: React.FC = () => {
         )}
 
         {/* Camera controls */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent z-30">
-          <div className="max-w-md mx-auto space-y-6">
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-30">
+          <div className="max-w-md mx-auto space-y-4">
             {/* Opacity slider */}
-            <div className="bg-white/40 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 p-6">
-              <label className="block text-white text-lg font-semibold mb-3">
+            <div className="bg-white rounded-lg shadow-lg p-4 border border-gray-200">
+              <label className="block text-gray-700 text-sm font-medium mb-2">
                 Overlay Opacity: {Math.round(opacity * 100)}%
               </label>
               <input
@@ -189,17 +189,17 @@ const App: React.FC = () => {
             </div>
 
             {/* Action buttons */}
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
                 onClick={exitCamera}
-                className="flex-1 bg-white/40 backdrop-blur-lg hover:bg-white/50 focus:ring-4 focus:ring-white/30 text-white font-semibold py-4 px-6 rounded-xl text-lg transition-all cursor-pointer select-none shadow-xl border border-white/30 min-w-[120px]"
+                className="flex-1 bg-white hover:bg-gray-50 text-gray-800 font-medium py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 shadow-lg border border-gray-200"
               >
                 Exit Camera
               </button>
               {uploadedImage && (
                 <button
                   onClick={() => setShowClearConfirm(true)}
-                  className="flex-1 bg-red-500/80 hover:bg-red-600/90 focus:ring-4 focus:ring-red-300 text-white font-semibold py-4 px-6 rounded-xl text-lg transition-all cursor-pointer select-none shadow-xl min-w-[120px]"
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 shadow-lg"
                 >
                   Clear Image
                 </button>
@@ -217,24 +217,26 @@ const App: React.FC = () => {
 
   // Main UI view
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 flex flex-col items-center justify-center p-4">
-      <div className="bg-white/40 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 p-8 w-full max-w-md">
-        <div className="bg-gradient-to-br from-white/30 to-blue-200/20 p-6 rounded-xl">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-lg max-w-md w-full border border-gray-200">
+        <div className="p-6">
           {/* Title */}
-          <h1 className="text-4xl font-bold text-center text-gray-800 mb-8 select-none">TraceCam</h1>
+          <h1 className="text-2xl font-bold text-gray-900 text-center mb-8">TraceCam</h1>
 
           {/* Image preview */}
           {uploadedImage && (
-            <div className="mb-8">
-              <img
-                src={uploadedImage}
-                alt="Preview"
-                className="w-full h-48 object-contain bg-gray-100/50 rounded-xl border-2 border-dashed border-gray-300"
-                style={{ opacity }}
-              />
+            <div className="mb-6">
+              <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-4">
+                <img
+                  src={uploadedImage}
+                  alt="Preview"
+                  className="w-full h-48 object-contain"
+                  style={{ opacity }}
+                />
+              </div>
               <button
                 onClick={() => setShowClearConfirm(true)}
-                className="mt-3 text-red-600 hover:text-red-800 text-lg font-semibold cursor-pointer select-none"
+                className="mt-3 text-red-600 hover:text-red-700 text-sm font-medium"
               >
                 Remove Image
               </button>
@@ -242,7 +244,7 @@ const App: React.FC = () => {
           )}
 
           {/* Upload button */}
-          <div className="mb-8">
+          <div className="mb-6">
             <input
               ref={fileInputRef}
               type="file"
@@ -252,15 +254,15 @@ const App: React.FC = () => {
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full bg-blue-500 hover:bg-blue-600 focus:ring-4 focus:ring-blue-300 text-white font-semibold py-4 px-6 rounded-xl text-lg transition-all cursor-pointer select-none shadow-lg"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               {uploadedImage ? 'Change Image' : 'Upload Image'}
             </button>
           </div>
 
           {/* Opacity slider */}
-          <div className="mb-8">
-            <label className="block text-gray-700 text-lg font-semibold mb-3 select-none">
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-medium mb-2">
               Overlay Opacity: {Math.round(opacity * 100)}%
             </label>
             <input
@@ -278,9 +280,9 @@ const App: React.FC = () => {
           <button
             onClick={startCamera}
             disabled={!uploadedImage}
-            className={`w-full font-semibold py-4 px-6 rounded-xl text-lg transition-all cursor-pointer select-none shadow-lg min-w-[120px] ${
+            className={`w-full font-medium py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
               uploadedImage
-                ? 'bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 text-white'
+                ? 'bg-green-600 hover:bg-green-700 text-white focus:ring-green-500'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
@@ -288,7 +290,7 @@ const App: React.FC = () => {
           </button>
 
           {!uploadedImage && (
-            <p className="text-gray-600 text-lg text-center mt-4 select-none">
+            <p className="text-gray-500 text-sm text-center mt-3">
               Upload an image first to start tracing
             </p>
           )}
@@ -296,10 +298,10 @@ const App: React.FC = () => {
       </div>
 
       {/* Privacy info */}
-      <div className="mt-8 text-center">
+      <div className="mt-6 text-center">
         <button
           onClick={() => setShowPrivacyModal(true)}
-          className="text-white/90 hover:text-white text-lg underline cursor-pointer select-none font-medium"
+          className="text-gray-500 hover:text-gray-700 text-sm underline"
         >
           Privacy Info
         </button>
