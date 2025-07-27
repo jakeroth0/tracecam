@@ -14,13 +14,24 @@ const App: React.FC = () => {
   const [hideMode, setHideMode] = useState<boolean>(false);
   const [showOpacitySlider, setShowOpacitySlider] = useState<boolean>(false);
   const [isPictureMoveActive, setIsPictureMoveActive] = useState(false);
+  const [isCameraMoveActive, setIsCameraMoveActive] = useState(false);
 
-  // Simple position state - no complex libraries
+  // Simple position state - using viewport coordinates
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0, scale: 1 });
+  const [cameraTransform, setCameraTransform] = useState({ x: 0, y: 0, scale: 1 });
   const dragStartPos = useRef({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const lastPinchDistance = useRef(0);
   const isPinching = useRef(false);
+
+  // Calculate the viewport area for camera/image (accounting for bars)
+  const getViewportArea = () => {
+    if (hideMode) {
+      return { top: 0, bottom: 0, height: window.innerHeight };
+    } else {
+      return { top: 56, bottom: 56, height: window.innerHeight - 112 }; // 56px for each bar
+    }
+  };
 
   // Helper function to calculate distance between two touch points
   const getDistance = (touch1: React.Touch, touch2: React.Touch) => {
@@ -30,35 +41,50 @@ const App: React.FC = () => {
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (!isPictureMoveActive) return;
+    if (!isPictureMoveActive && !isCameraMoveActive) return;
     isDragging.current = true;
     e.currentTarget.setPointerCapture(e.pointerId);
     dragStartPos.current = { x: e.clientX, y: e.clientY };
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isPictureMoveActive || !isDragging.current) return;
+    if ((!isPictureMoveActive && !isCameraMoveActive) || !isDragging.current) return;
     const dx = e.clientX - dragStartPos.current.x;
     const dy = e.clientY - dragStartPos.current.y;
-    setImagePosition(prev => ({
-      ...prev,
-      x: prev.x + dx,
-      y: prev.y + dy
-    }));
+    
+    if (isPictureMoveActive) {
+      setImagePosition(prev => ({
+        ...prev,
+        x: prev.x + dx,
+        y: prev.y + dy
+      }));
+    } else if (isCameraMoveActive) {
+      setCameraTransform(prev => ({
+        ...prev,
+        x: prev.x + dx,
+        y: prev.y + dy
+      }));
+    }
+    
     dragStartPos.current = { x: e.clientX, y: e.clientY };
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
-    if (!isPictureMoveActive) return;
+    if (!isPictureMoveActive && !isCameraMoveActive) return;
     isDragging.current = false;
     e.currentTarget.releasePointerCapture(e.pointerId);
+    
     // Save to localStorage
-    localStorage.setItem('tracecam_image_transform', JSON.stringify(imagePosition));
+    if (isPictureMoveActive) {
+      localStorage.setItem('tracecam_image_transform', JSON.stringify(imagePosition));
+    } else if (isCameraMoveActive) {
+      localStorage.setItem('tracecam_camera_transform', JSON.stringify(cameraTransform));
+    }
   };
 
   // Touch event handlers for pinch-to-zoom
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (!isPictureMoveActive) return;
+    if (!isPictureMoveActive && !isCameraMoveActive) return;
     
     if (e.touches.length === 2) {
       // Start pinch gesture
@@ -74,7 +100,7 @@ const App: React.FC = () => {
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isPictureMoveActive) return;
+    if (!isPictureMoveActive && !isCameraMoveActive) return;
     e.preventDefault(); // Prevent page scrolling
     
     if (e.touches.length === 2 && isPinching.current) {
@@ -82,34 +108,56 @@ const App: React.FC = () => {
       const currentDistance = getDistance(e.touches[0], e.touches[1]);
       const scale = currentDistance / lastPinchDistance.current;
       
-      setImagePosition(prev => ({
-        ...prev,
-        scale: Math.max(0.5, Math.min(3, prev.scale * scale)) // Limit scale between 0.5x and 3x
-      }));
+      if (isPictureMoveActive) {
+        setImagePosition(prev => ({
+          ...prev,
+          scale: Math.max(0.5, Math.min(3, prev.scale * scale)) // Limit scale between 0.5x and 3x
+        }));
+      } else if (isCameraMoveActive) {
+        setCameraTransform(prev => ({
+          ...prev,
+          scale: Math.max(0.5, Math.min(3, prev.scale * scale)) // Limit scale between 0.5x and 3x
+        }));
+      }
       
       lastPinchDistance.current = currentDistance;
     } else if (e.touches.length === 1 && isDragging.current) {
       // Handle single touch drag
       const dx = e.touches[0].clientX - dragStartPos.current.x;
       const dy = e.touches[0].clientY - dragStartPos.current.y;
-      setImagePosition(prev => ({
-        ...prev,
-        x: prev.x + dx,
-        y: prev.y + dy
-      }));
+      
+      if (isPictureMoveActive) {
+        setImagePosition(prev => ({
+          ...prev,
+          x: prev.x + dx,
+          y: prev.y + dy
+        }));
+      } else if (isCameraMoveActive) {
+        setCameraTransform(prev => ({
+          ...prev,
+          x: prev.x + dx,
+          y: prev.y + dy
+        }));
+      }
+      
       dragStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!isPictureMoveActive) return;
+    if (!isPictureMoveActive && !isCameraMoveActive) return;
     
     if (e.touches.length === 0) {
       // All touches ended
       isDragging.current = false;
       isPinching.current = false;
+      
       // Save to localStorage
-      localStorage.setItem('tracecam_image_transform', JSON.stringify(imagePosition));
+      if (isPictureMoveActive) {
+        localStorage.setItem('tracecam_image_transform', JSON.stringify(imagePosition));
+      } else if (isCameraMoveActive) {
+        localStorage.setItem('tracecam_camera_transform', JSON.stringify(cameraTransform));
+      }
     } else if (e.touches.length === 1 && isPinching.current) {
       // Transition from pinch to single touch drag
       isPinching.current = false;
@@ -120,15 +168,28 @@ const App: React.FC = () => {
 
   // Load from localStorage on mount
   useEffect(() => {
-    const savedTransform = localStorage.getItem('tracecam_image_transform');
-    if (savedTransform) {
+    const savedImageTransform = localStorage.getItem('tracecam_image_transform');
+    const savedCameraTransform = localStorage.getItem('tracecam_camera_transform');
+    
+    if (savedImageTransform) {
       try {
-        const parsedTransform = JSON.parse(savedTransform);
+        const parsedTransform = JSON.parse(savedImageTransform);
         if (parsedTransform && typeof parsedTransform === 'object') {
           setImagePosition(parsedTransform);
         }
       } catch (e) {
         console.error("Failed to parse image transform from localStorage", e);
+      }
+    }
+    
+    if (savedCameraTransform) {
+      try {
+        const parsedTransform = JSON.parse(savedCameraTransform);
+        if (parsedTransform && typeof parsedTransform === 'object') {
+          setCameraTransform(parsedTransform);
+        }
+      } catch (e) {
+        console.error("Failed to parse camera transform from localStorage", e);
       }
     }
   }, []);
@@ -250,9 +311,12 @@ const App: React.FC = () => {
   // Clear overlay image
   const handleClearImage = () => {
     setOverlayImage('');
-    const resetPos = { x: 0, y: 0, scale: 1 };
-    setImagePosition(resetPos);
+    const resetImagePos = { x: 0, y: 0, scale: 1 };
+    const resetCameraPos = { x: 0, y: 0, scale: 1 };
+    setImagePosition(resetImagePos);
+    setCameraTransform(resetCameraPos);
     localStorage.removeItem('tracecam_image_transform');
+    localStorage.removeItem('tracecam_camera_transform');
   };
 
   // Handle Move button toggle
@@ -271,6 +335,18 @@ const App: React.FC = () => {
 
   const handlePictureMoveToggle = () => {
     setIsPictureMoveActive(prev => !prev);
+    // Disable camera mode when enabling picture mode
+    if (!isPictureMoveActive) {
+      setIsCameraMoveActive(false);
+    }
+  };
+
+  const handleCameraMoveToggle = () => {
+    setIsCameraMoveActive(prev => !prev);
+    // Disable picture mode when enabling camera mode
+    if (!isCameraMoveActive) {
+      setIsPictureMoveActive(false);
+    }
   };
 
   // Handle Hide button
@@ -280,9 +356,19 @@ const App: React.FC = () => {
       setIsPictureMoveActive(false);
       localStorage.setItem('tracecam_image_transform', JSON.stringify(imagePosition));
     }
-    // We are adding the top bar height (56px / 2 = 28px)
-    // to the y position to compensate for the container moving up.
-    setImagePosition(prev => ({ ...prev, y: prev.y + 28 }));
+    if (isCameraMoveActive) {
+      setIsCameraMoveActive(false);
+      localStorage.setItem('tracecam_camera_transform', JSON.stringify(cameraTransform));
+    }
+    
+    // Compensate camera transform to prevent jumping
+    // When container expands from top-14 to inset-0, it moves up 56px
+    // So we move the camera down 56px to keep it visually in the same place
+    setCameraTransform(prev => ({
+      ...prev,
+      y: prev.y + 56
+    }));
+    
     setHideMode(true);
     setShowMoveMenu(false);
     setShowOpacitySlider(false);
@@ -290,8 +376,14 @@ const App: React.FC = () => {
 
   // Handle show from eye button
   const handleShow = () => {
-    // We subtract the top bar height to compensate for the container moving down.
-    setImagePosition(prev => ({ ...prev, y: prev.y - 28 }));
+    // Compensate camera transform to prevent jumping  
+    // When container shrinks from inset-0 to top-14, it moves down 56px
+    // So we move the camera up 56px to keep it visually in the same place
+    setCameraTransform(prev => ({
+      ...prev,
+      y: prev.y - 56
+    }));
+    
     setHideMode(false);
   };
 
@@ -495,7 +587,12 @@ const App: React.FC = () => {
                       >
                         Picture
                       </button>
-                      <button className="text-gray-400 font-medium px-6 py-2 rounded-lg transition-colors duration-200 border border-gray-200 cursor-not-allowed">
+                      <button 
+                        onClick={handleCameraMoveToggle}
+                        className={`text-black font-medium px-6 py-2 rounded-lg transition-colors duration-200 border border-gray-200 ${
+                          isCameraMoveActive ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'
+                        }`}
+                      >
                         Camera
                       </button>
                     </div>
@@ -515,8 +612,14 @@ const App: React.FC = () => {
             </button>
           )}
 
-          {/* Camera Feed & Overlay (positioning is dependent on hideMode) */}
-          <div className={`fixed ${hideMode ? 'inset-0' : 'top-14 bottom-14 left-0 right-0'} w-full h-full`}>
+          {/* Camera Feed & Overlay (using smart positioning) */}
+          <div 
+            className={`fixed ${hideMode ? 'inset-0' : 'top-14 bottom-14 left-0 right-0'} w-full h-full`}
+            style={{
+              transform: `translate(${cameraTransform.x}px, ${cameraTransform.y}px) scale(${cameraTransform.scale})`,
+              transformOrigin: 'center center'
+            }}
+          >
             <video
               ref={videoRef}
               autoPlay
@@ -539,7 +642,7 @@ const App: React.FC = () => {
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
                 onTouchCancel={handleTouchEnd}
-                className="absolute top-0 left-0 w-full h-full touch-none z-10"
+                className="absolute inset-0 w-full h-full touch-none z-10"
                 style={{
                   transform: `translate(${imagePosition.x}px, ${imagePosition.y}px) scale(${imagePosition.scale})`,
                   opacity: overlayOpacity,
