@@ -164,7 +164,7 @@ const App: React.FC = () => {
   // Privacy modal component
   const PrivacyModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-6">
-      <div className="bg-white rounded-lg max-w-md w-full border border-gray-200">
+      <div className="bg-green-50 rounded-lg max-w-md w-full border border-green-200">
         <div className="p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Privacy Notice</h2>
           <p className="text-gray-600 text-sm leading-relaxed mb-6">
@@ -173,7 +173,7 @@ const App: React.FC = () => {
           </p>
           <button
             onClick={dismissPrivacyModal}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded text-sm transition-colors"
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded text-sm transition-colors"
           >
             Understand
           </button>
