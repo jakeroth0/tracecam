@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './App.css';
 
 interface CameraMode {
@@ -10,6 +10,7 @@ const App: React.FC = () => {
   const [cameraMode, setCameraMode] = useState<CameraMode>({ isActive: false, stream: null });
   const [showPrivacyModal, setShowPrivacyModal] = useState<boolean>(false);
   const [debugInfo, setDebugInfo] = useState<string>('');
+  const [isVideoLoaded, setIsVideoLoaded] = useState<boolean>(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -21,6 +22,74 @@ const App: React.FC = () => {
   const isSecureContext = () => {
     return window.isSecureContext || window.location.protocol === 'https:' || window.location.hostname === 'localhost';
   };
+
+  // Properly handle video stream setup
+  const setupVideoStream = useCallback(async (stream: MediaStream) => {
+    if (!videoRef.current) {
+      console.error('Video ref not available');
+      setDebugInfo('Video element not ready');
+      return false;
+    }
+
+    try {
+      console.log('Setting up video stream...', stream);
+      const video = videoRef.current;
+      
+      // Set the stream
+      video.srcObject = stream;
+      
+      // Set video properties for better compatibility
+      video.muted = true;
+      video.playsInline = true;
+      video.autoplay = true;
+      
+      // Wait for metadata to load
+      await new Promise<void>((resolve, reject) => {
+        const onLoadedMetadata = () => {
+          console.log('Video metadata loaded successfully');
+          console.log('Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+          setDebugInfo('Video metadata loaded - dimensions: ' + video.videoWidth + 'x' + video.videoHeight);
+          setIsVideoLoaded(true);
+          video.removeEventListener('loadedmetadata', onLoadedMetadata);
+          video.removeEventListener('error', onError);
+          resolve();
+        };
+        
+        const onError = (e: Event) => {
+          console.error('Video metadata loading error:', e);
+          setDebugInfo('Video metadata loading failed');
+          video.removeEventListener('loadedmetadata', onLoadedMetadata);
+          video.removeEventListener('error', onError);
+          reject(e);
+        };
+        
+        video.addEventListener('loadedmetadata', onLoadedMetadata);
+        video.addEventListener('error', onError);
+        
+        // If metadata is already loaded
+        if (video.readyState >= 1) {
+          onLoadedMetadata();
+        }
+      });
+
+      // Try to play the video
+      try {
+        await video.play();
+        console.log('Video is playing successfully');
+        setDebugInfo('Video playing successfully - ' + video.videoWidth + 'x' + video.videoHeight);
+        return true;
+      } catch (playError) {
+        console.error('Video play failed:', playError);
+        setDebugInfo('Video play failed: ' + (playError instanceof Error ? playError.message : String(playError)));
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('Video setup failed:', error);
+      setDebugInfo('Video setup failed: ' + (error instanceof Error ? error.message : String(error)));
+      return false;
+    }
+  }, []);
 
   // Load saved data from localStorage on component mount
   useEffect(() => {
@@ -54,92 +123,65 @@ const App: React.FC = () => {
     }
 
     setDebugInfo('Requesting camera access...');
+    setIsVideoLoaded(false);
     console.log('Starting camera...');
     
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: "environment" } }
-      });
+      // Try back camera first
+      console.log('Attempting to get back camera...');
+      const constraints = {
+        video: {
+          facingMode: { exact: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
       
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       console.log('Got back camera stream:', stream);
       setDebugInfo('Back camera stream obtained');
       
-      if (videoRef.current) {
-        console.log('Setting video source...');
-        videoRef.current.srcObject = stream;
-        
-        // Add event listeners for video debugging
-        videoRef.current.onloadedmetadata = () => {
-          console.log('Video metadata loaded');
-          setDebugInfo('Video metadata loaded');
-        };
-        
-        videoRef.current.onplay = () => {
-          console.log('Video playing');
-          setDebugInfo('Video playing successfully');
-        };
-        
-        videoRef.current.onerror = (e) => {
-          console.error('Video error:', e);
-          setDebugInfo('Video error occurred');
-        };
-        
-        // Ensure video plays automatically
-        try {
-          await videoRef.current.play();
-          console.log('Video play() called successfully');
-          setCameraMode({ isActive: true, stream });
-          setDebugInfo('Camera active - should see video');
-        } catch (playError) {
-          console.error('Video play error:', playError);
-          setDebugInfo('Video play failed: ' + (playError instanceof Error ? playError.message : String(playError)));
-        }
+      const success = await setupVideoStream(stream);
+      if (success) {
+        setCameraMode({ isActive: true, stream });
+      } else {
+        // Clean up stream if video setup failed
+        stream.getTracks().forEach(track => track.stop());
+        setDebugInfo('Video setup failed for back camera');
       }
+      
     } catch (error) {
-      console.log('Back camera failed, trying default camera...');
+      console.log('Back camera failed, trying default camera...', error);
       setDebugInfo('Back camera failed, trying default camera...');
       
-      // Fallback to default camera if back camera not available
+      // Fallback to default camera
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        console.log('Attempting to get default camera...');
+        const constraints = {
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        };
+        
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         console.log('Got default camera stream:', stream);
         setDebugInfo('Default camera stream obtained');
         
-        if (videoRef.current) {
-          console.log('Setting video source (default camera)...');
-          videoRef.current.srcObject = stream;
-          
-          // Add event listeners for video debugging
-          videoRef.current.onloadedmetadata = () => {
-            console.log('Video metadata loaded (default)');
-            setDebugInfo('Video metadata loaded (default)');
-          };
-          
-          videoRef.current.onplay = () => {
-            console.log('Video playing (default)');
-            setDebugInfo('Video playing successfully (default)');
-          };
-          
-          videoRef.current.onerror = (e) => {
-            console.error('Video error (default):', e);
-            setDebugInfo('Video error occurred (default)');
-          };
-          
-          // Ensure video plays automatically
-          try {
-            await videoRef.current.play();
-            console.log('Video play() called successfully (default)');
-            setCameraMode({ isActive: true, stream });
-            setDebugInfo('Camera active (default) - should see video');
-          } catch (playError) {
-            console.error('Video play error (default):', playError);
-            setDebugInfo('Video play failed (default): ' + (playError instanceof Error ? playError.message : String(playError)));
-          }
+        const success = await setupVideoStream(stream);
+        if (success) {
+          setCameraMode({ isActive: true, stream });
+        } else {
+          // Clean up stream if video setup failed
+          stream.getTracks().forEach(track => track.stop());
+          setDebugInfo('Video setup failed for default camera');
         }
+        
       } catch (fallbackError) {
         console.error('All camera access failed:', fallbackError);
-        setDebugInfo('Camera access failed: ' + (fallbackError instanceof Error ? fallbackError.message : String(fallbackError)));
-        alert('Camera access is required for TraceCam to work. Please enable camera permissions and try again.');
+        const errorMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+        setDebugInfo('Camera access failed: ' + errorMessage);
+        alert('Camera access failed. Please ensure:\n1. Camera permissions are granted\n2. No other apps are using the camera\n3. Camera is properly connected');
       }
     }
   };
@@ -153,6 +195,7 @@ const App: React.FC = () => {
       });
     }
     setCameraMode({ isActive: false, stream: null });
+    setIsVideoLoaded(false);
     setDebugInfo('Camera stopped');
   };
 
@@ -185,17 +228,18 @@ const App: React.FC = () => {
   // Camera view component
   if (cameraMode.isActive) {
     return (
-      <div className="min-h-screen bg-gray-900 relative overflow-hidden">
+      <div className="min-h-screen bg-black relative overflow-hidden">
         {/* Debug info overlay */}
         <div className="absolute top-4 left-4 right-4 z-50">
           <div className="bg-white rounded-lg border border-gray-200 p-3">
             <p className="text-xs text-gray-600">Debug: {debugInfo}</p>
             <p className="text-xs text-gray-500 mt-1">
-              Stream active: {cameraMode.stream ? 'Yes' : 'No'}
+              Stream active: {cameraMode.stream ? 'Yes' : 'No'} | Video loaded: {isVideoLoaded ? 'Yes' : 'No'}
             </p>
           </div>
         </div>
 
+        {/* Video element with explicit styling */}
         <video
           ref={videoRef}
           autoPlay
@@ -206,12 +250,37 @@ const App: React.FC = () => {
             position: 'absolute',
             top: 0,
             left: 0,
-            width: '100%',
-            height: '100%',
+            width: '100vw',
+            height: '100vh',
             objectFit: 'cover',
-            backgroundColor: 'black'
+            backgroundColor: 'black',
+            zIndex: 1
+          }}
+          onLoadedMetadata={() => {
+            console.log('Video metadata loaded (event)');
+            setIsVideoLoaded(true);
+          }}
+          onCanPlay={() => {
+            console.log('Video can play');
+          }}
+          onPlay={() => {
+            console.log('Video started playing');
+          }}
+          onError={(e) => {
+            console.error('Video error event:', e);
+            setDebugInfo('Video error occurred');
           }}
         />
+
+        {/* Loading indicator */}
+        {!isVideoLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 bg-black">
+            <div className="text-white text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
+              <p>Loading camera feed...</p>
+            </div>
+          </div>
+        )}
 
         {/* Camera controls */}
         <div className="absolute bottom-0 left-0 right-0 p-4 z-40">
@@ -225,6 +294,11 @@ const App: React.FC = () => {
                 <p className="text-xs text-gray-500">
                   Status: {debugInfo}
                 </p>
+                {isVideoLoaded && (
+                  <p className="text-xs text-green-600 mt-1">
+                    ✅ Video feed active
+                  </p>
+                )}
               </div>
               
               <button
@@ -302,7 +376,7 @@ const App: React.FC = () => {
               <h2 className="text-lg font-medium text-gray-900 mb-2">Test Camera Access</h2>
               <p className="text-gray-600 text-sm leading-relaxed">
                 {isSecureContext() 
-                  ? "Click the button below to test your camera feed."
+                  ? "Click the button below to test your camera feed. Make sure no other apps are using your camera."
                   : "Camera testing works on localhost. For mobile testing, deploy to HTTPS."
                 }
               </p>
