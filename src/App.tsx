@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { useGesture } from '@use-gesture/react';
+import type { FullGestureState } from '@use-gesture/react';
 
 const App: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -18,8 +19,6 @@ const App: React.FC = () => {
   const [showOpacitySlider, setShowOpacitySlider] = useState<boolean>(false);
 
   // New state for image transform (position and scale)
-  const [imageTransform, setImageTransform] = useState({ x: 0, y: 0, scale: 1 });
-  const [isPictureMoveMode, setIsPictureMoveMode] = useState(false);
   const [isPictureMoveActive, setIsPictureMoveActive] = useState(false);
 
   const [{ x, y, scale }, api] = useSpring(() => ({
@@ -27,7 +26,7 @@ const App: React.FC = () => {
     y: 0,
     scale: 1,
     config: { tension: 180, friction: 26 },
-    onRest: (result) => {
+    onRest: (result: { value: { x: number; y: number; scale: number; } }) => {
       const transform = {
         x: result.value.x,
         y: result.value.y,
@@ -39,14 +38,14 @@ const App: React.FC = () => {
 
   // Gesture handling for the overlay image
   const bind = useGesture({
-    onDrag: ({ active, movement: [mx, my] }) => {
+    onDrag: ({ active, movement: [mx, my] }: FullGestureState<'drag'>) => {
       api.start({ 
         x: active ? mx : 0, 
         y: active ? my : 0, 
         immediate: active 
       });
     },
-    onPinch: ({ active, movement: [s] }) => {
+    onPinch: ({ active, movement: [s] }: FullGestureState<'pinch'>) => {
       api.start({ scale: active ? s : 1, immediate: active });
     },
   }, {
