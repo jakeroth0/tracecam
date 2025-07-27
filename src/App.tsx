@@ -1,9 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useSpring, animated, SpringValue } from '@react-spring/web';
+import { useSpring, animated } from '@react-spring/web';
 import { useGesture } from '@use-gesture/react';
 import type { FullGestureState } from '@use-gesture/react';
-
-type GestureType = FullGestureState<'drag'> | FullGestureState<'pinch'>;
 
 const App: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
