@@ -21,39 +21,30 @@ const App: React.FC = () => {
   // New state for image transform (position and scale)
   const [isPictureMoveActive, setIsPictureMoveActive] = useState(false);
 
+  // Correct react-spring and useGesture implementation
   const [{ x, y, scale }, api] = useSpring(() => ({
     x: 0,
     y: 0,
     scale: 1,
     config: { tension: 180, friction: 26 },
     onRest: (result: { value: { x: number; y: number; scale: number; } }) => {
-      const transform = {
-        x: result.value.x,
-        y: result.value.y,
-        scale: result.value.scale,
-      };
-      localStorage.setItem('tracecam_image_transform', JSON.stringify(transform));
+      localStorage.setItem('tracecam_image_transform', JSON.stringify(result.value));
     },
   }));
 
-  // Gesture handling for the overlay image
   const bind = useGesture({
-    onDrag: ({ active, movement: [mx, my] }: FullGestureState<'drag'>) => {
-      api.start({ 
-        x: active ? mx : 0, 
-        y: active ? my : 0, 
-        immediate: active 
-      });
+    onDrag: ({ offset: [dx, dy] }) => {
+      api.start({ x: dx, y: dy });
     },
-    onPinch: ({ active, movement: [s] }: FullGestureState<'pinch'>) => {
-      api.start({ scale: active ? s : 1, immediate: active });
+    onPinch: ({ offset: [s] }) => {
+      api.start({ scale: s });
     },
   }, {
     drag: { from: () => [x.get(), y.get()], filterTaps: true },
     pinch: { from: () => [scale.get(), 0], scaleBounds: { min: 0.5, max: 5 } },
   });
 
-  // Load from localStorage on mount and sync springs
+  // Load from localStorage on mount
   useEffect(() => {
     const savedTransform = localStorage.getItem('tracecam_image_transform');
     if (savedTransform) {
