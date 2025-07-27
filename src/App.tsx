@@ -2,9 +2,19 @@ import React, { useRef, useEffect, useState } from 'react';
 
 const App: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string>('');
   const [cameraSupported, setCameraSupported] = useState<boolean>(true);
+  const [showPrivacy, setShowPrivacy] = useState<boolean>(true);
+
+  // Check privacy consent from localStorage on mount
+  useEffect(() => {
+    const privacyAccepted = localStorage.getItem('tracecam_privacy_accepted');
+    if (privacyAccepted === 'true') {
+      setShowPrivacy(false);
+    }
+  }, []);
 
   // Check if camera API is supported
   useEffect(() => {
@@ -14,9 +24,9 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Request camera stream on mount
+  // Request camera stream only after privacy consent
   useEffect(() => {
-    if (!cameraSupported) return;
+    if (!cameraSupported || showPrivacy) return;
 
     const startCamera = async () => {
       try {
@@ -46,6 +56,7 @@ const App: React.FC = () => {
           }
         }
 
+        streamRef.current = mediaStream;
         setStream(mediaStream);
 
         // Attach stream to video element
@@ -64,11 +75,18 @@ const App: React.FC = () => {
 
     // Cleanup function
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
       }
     };
-  }, [cameraSupported]);
+  }, [cameraSupported, showPrivacy]);
+
+  // Handle privacy dismissal
+  const handlePrivacyAccept = () => {
+    setShowPrivacy(false);
+    localStorage.setItem('tracecam_privacy_accepted', 'true');
+  };
 
   // Handle video can play event
   const handleCanPlay = () => {
@@ -117,6 +135,33 @@ const App: React.FC = () => {
           <p className="text-gray-300">
             Your browser doesn't support camera access. Please try a modern browser like Chrome, Firefox, or Safari.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Privacy modal
+  if (showPrivacy) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-purple-900 to-pink-900 px-4">
+        <div className="bg-white/60 backdrop-blur-md rounded-xl shadow-xl p-6 max-w-sm mx-auto text-center">
+          <div className="text-4xl mb-4">📷</div>
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">Welcome to TraceCam</h2>
+          <p className="text-gray-700 mb-6 leading-relaxed">
+            TraceCam uses your camera for tracing overlays. Images and data <strong>never leave your device</strong>. 
+            By continuing, you agree to grant camera access.
+          </p>
+          <div className="bg-green-100 border border-green-300 rounded-lg p-3 mb-6">
+            <p className="text-green-800 text-sm font-medium">
+              🔒 100% Private - Everything stays local
+            </p>
+          </div>
+          <button
+            onClick={handlePrivacyAccept}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
+          >
+            Continue & Allow Camera
+          </button>
         </div>
       </div>
     );
